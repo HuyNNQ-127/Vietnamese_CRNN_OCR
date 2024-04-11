@@ -69,22 +69,24 @@ print(len(alphabet), alphabet)
 converter = utils.strLabelConverter(alphabet, ignore_case=False)
 criterion = CTCLoss()
 
-crnn = crnn.CRNN(opt.imgH, nc, nclass, opt.nh)
+crnn_model = crnn.CRNN(opt.imgH, nc, nclass, opt.nh)
 if opt.pretrained != '':
     print('loading pretrained model from %s' % opt.pretrained)
-    pretrain = torch.load(opt.pretrained)
-    crnn.load_state_dict(pretrain, strict=False)
+    if opt.cuda:
+        crnn_model.load_state_dict(torch.load(opt.pretrained))
+    else:
+        crnn_model.load_state_dict(torch.load(opt.pretrained, map_location=torch.device('cpu')))
 
 image = torch.FloatTensor(opt.batch_size, 3, opt.imgH, opt.imgH)
 text = torch.IntTensor(opt.batch_size * 5)
 length = torch.IntTensor(opt.batch_size)
 
 if opt.cuda:
-    crnn.cuda()
+    crnn_model.cuda()
     image = image.cuda()
     criterion = criterion.cuda()
 
-summary(crnn.cnn, (3, opt.imgH, opt.imgW))
+summary(crnn_model.cnn, (3, opt.imgH, opt.imgW))
 
 image = Variable(image)
 text = Variable(text)
@@ -93,12 +95,12 @@ train_loss_avg = utils.averager()
 train_cer_avg = utils.averager()
 
 # setup optimizer
-optimizer = optim.Adam(crnn.parameters(), lr=opt.lr)
+optimizer = optim.Adam(crnn_model.parameters(), lr=opt.lr)
 
 def val(net, data_loader, criterion, max_iter=1000):
     print('Start val')
 
-    for p in crnn.parameters():
+    for p in crnn_model.parameters():
         p.requires_grad = False
 
     net.eval()
@@ -118,7 +120,7 @@ def val(net, data_loader, criterion, max_iter=1000):
             utils.loadData(text, t)
             utils.loadData(length, l)
 
-            preds = crnn(image)
+            preds = crnn_model(image)
             preds_size = Variable(torch.IntTensor([preds.size(0)] * batch_size))
             cost = criterion(preds, text, preds_size, length)/batch_size
             cost = cost.detach().item()
@@ -146,10 +148,10 @@ def trainBatch(net, data, criterion, optimizer):
     utils.loadData(text, t)
     utils.loadData(length, l)
     
-    preds = crnn(image)
+    preds = crnn_model(image)
     preds_size = Variable(torch.IntTensor([preds.size(0)] * batch_size))
     cost = criterion(preds, text, preds_size, length)/batch_size
-    crnn.zero_grad()
+    crnn_model.zero_grad()
     cost.backward()
     optimizer.step()
     cost = cost.detach().item()
@@ -164,11 +166,11 @@ def trainBatch(net, data, criterion, optimizer):
 for epoch in range(1, opt.nepoch+1):
     t = tqdm(iter(train_loader), total=len(train_loader), desc='Epoch {}'.format(epoch))
     for i, data in enumerate(t):
-        for p in crnn.parameters():
+        for p in crnn_model.parameters():
             p.requires_grad = True
-        crnn.train()
+        crnn_model.train()
 
-        cost, cer_loss, n = trainBatch(crnn, data, criterion, optimizer)       
+        cost, cer_loss, n = trainBatch(crnn_model, data, criterion, optimizer)       
 
         train_loss_avg.add(cost)
         train_cer_avg.add(cer_loss)
@@ -179,9 +181,9 @@ for epoch in range(1, opt.nepoch+1):
     train_cer_avg.reset()
 
     if epoch % opt.valInterval == 0:
-        val(crnn, test_loader, criterion)
+        val(crnn_model, test_loader, criterion)
 
     # do checkpointing
     if epoch % opt.saveInterval == 0:
         torch.save(
-            crnn.state_dict(), '{}/netCRNN_{}.pth'.format(opt.expr_dir, epoch))
+            crnn_model.state_dict(), '{}/netCRNN_{}.pth'.format(opt.expr_dir, epoch))
