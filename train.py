@@ -110,7 +110,7 @@ def val(net, data_loader, criterion, max_iter=1000):
     max_iter = min(max_iter, len(data_loader))
     with torch.no_grad():
         for i in range(max_iter):
-            data = val_iter.next()
+            data = next(val_iter)
             cpu_images, cpu_texts = data
             batch_size = cpu_images.size(0)
             utils.loadData(image, cpu_images)
