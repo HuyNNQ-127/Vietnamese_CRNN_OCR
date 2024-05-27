@@ -8,3 +8,7 @@ Vietnamese_CRNN_OCR is an Optical Character Recognition (OCR) system designed to
 
 - **CRNN Architecture**: Integrates convolutional layers for feature extraction and recurrent layers (Bidirectional-LSTM) for sequence prediction.
 - **CTC Loss**: Employs CTC loss to handle sequence alignment issues, allowing the model to learn from unsegmented input-output pairs.
+
+## Model
+Due to Github'file limitation(25MB), the model can be found here:
+https://drive.google.com/file/d/1ni47Ucd2YjicFW4h9dNeP3XS-Pdagjvk/view?usp=drive_link
