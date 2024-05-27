@@ -1,1 +1,0 @@
-# Vietnamese_CRNN_OCR
